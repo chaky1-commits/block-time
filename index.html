@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Block Time">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Block Time Calc</title>
+<style>
+:root{--bg:#050506;--surface:#101113;--line:#ffffff;--txt:#f5f6f7;--dim:#c4c7cc;--green:#00ff5a;--key:#17181b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--txt);font-family:-apple-system,"SF Pro Display","Segoe UI",Roboto,sans-serif;color-scheme:dark;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{display:flex;flex-direction:column;padding:14px 14px 0}
+.sec{margin-bottom:12px}
+.head{display:flex;align-items:center;gap:10px;margin-bottom:8px;min-height:28px}
+.head .t{font-size:13px;font-weight:700;letter-spacing:2.5px;color:var(--txt);white-space:nowrap}
+.head .ln{flex:1;height:1px;background:linear-gradient(90deg,#8a8d93,transparent)}
+.clr{background:transparent;color:var(--txt);border:1.5px solid var(--line);border-radius:999px;padding:5px 16px;font-size:12px;font-weight:700;letter-spacing:1.5px}
+.clr:active{background:#2a2b2e}
+.row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.row.one{grid-template-columns:1fr}
+.col{display:flex;flex-direction:column;min-width:0}
+.lab{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:1.5px;margin:0 0 4px 2px;min-height:14px}
+.cell{display:flex;align-items:center;justify-content:center;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:4px;min-height:52px;min-width:0}
+.cell.in{cursor:pointer}
+.cell.active{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+.val{font-size:20px;font-weight:600;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;white-space:nowrap;line-height:26px;letter-spacing:.5px}
+.val.empty{color:#6a6d73}
+.res .val{color:var(--green);font-weight:700}
+.sp{flex:1}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 0 calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid #4a4b50}
+.kp button{background:var(--key);color:var(--txt);border:1.5px solid #6a6c72;border-radius:12px;height:clamp(34px,5.8dvh,50px);font-size:23px;font-weight:500;font-family:inherit}
+.kp button:active{background:#3a3b3f}
+.kp .fn{font-size:14px;font-weight:700;letter-spacing:1.5px;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<div class="sec">
+  <div class="head"><span class="t">BLOCK TIME</span><span class="ln"></span><button class="clr" id="clearAll">CLEAR</button></div>
+  <div class="row">
+    <div class="col"><div class="lab">R/O</div><div class="cell in" id="c_ro"><div class="val" id="v_ro"></div></div></div>
+    <div class="col"><div class="lab">R/I</div><div class="cell in" id="c_ri"><div class="val" id="v_ri"></div></div></div>
+    <div class="col"><div class="lab">B/T</div><div class="cell res"><div class="val" id="bt"></div></div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="head"><span class="t">TIME IN SERVICE</span><span class="ln"></span></div>
+  <div class="row">
+    <div class="col"><div class="lab">T/O</div><div class="cell in" id="c_to"><div class="val" id="v_to"></div></div></div>
+    <div class="col"><div class="lab">L/D</div><div class="cell in" id="c_ld"><div class="val" id="v_ld"></div></div></div>
+    <div class="col"><div class="lab">A/T</div><div class="cell res"><div class="val" id="at"></div></div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="head"><span class="t">INST TIME</span><span class="ln"></span></div>
+  <div class="row one">
+    <div class="cell res"><div class="val" id="inst"></div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="head"><span class="t">FUEL STATUS (KG)</span><span class="ln"></span></div>
+  <div class="row">
+    <div class="col"><div class="lab">RAMP OUT</div><div class="cell in" id="c_fo"><div class="val" id="v_fo"></div></div></div>
+    <div class="col"><div class="lab">REMAIN</div><div class="cell in" id="c_fr"><div class="val" id="v_fr"></div></div></div>
+    <div class="col"><div class="lab">USED</div><div class="cell res"><div class="val" id="used"></div></div></div>
+  </div>
+</div>
+
+<div class="sp"></div>
+<div class="kp" id="kp"></div>
+
+<script>
+var T={ro:'t',ri:'t',to:'t',ld:'t',fo:'f',fr:'f'};
+var order=['ro','ri','to','ld','fo','fr'];
+var v={ro:'',ri:'',to:'',ld:'',fo:'',fr:''};
+var act='ro';
+order.forEach(function(id){
+  document.getElementById('c_'+id).onclick=function(){act=id;draw();};
+});
+function fmtT(s){
+  if(!s)return null;
+  var p=(s+'____').slice(0,4);
+  return p.slice(0,2)+':'+p.slice(2);
+}
+function mins(s){
+  if(s.length!==4)return null;
+  var h=+s.slice(0,2),m=+s.slice(2);
+  if(h>23||m>59)return null;
+  return h*60+m;
+}
+function diff(a,b){
+  var x=mins(a),y=mins(b);
+  if(x===null||y===null)return null;
+  return (y-x+1440)%1440;
+}
+function hm(n){
+  if(n===null)return '';
+  var h=Math.floor(n/60),m=n%60;
+  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+}
+function draw(){
+  order.forEach(function(id){
+    var el=document.getElementById('v_'+id),c=document.getElementById('c_'+id);
+    var s=v[id],txt;
+    if(T[id]==='t'){txt=fmtT(s);}
+    else{txt=s?Number(s).toLocaleString('en-US'):null;}
+    if(txt===null){el.textContent=T[id]==='t'?'--:--':'-----';el.className='val empty';}
+    else{el.textContent=txt;el.className='val';}
+    c.className='cell in'+(id===act?' active':'');
+  });
+  var bt=diff(v.ro,v.ri),at=diff(v.to,v.ld);
+  document.getElementById('bt').textContent=hm(bt);
+  document.getElementById('at').textContent=hm(at);
+  document.getElementById('inst').textContent=hm(at);
+  var u='';
+  if(v.fo&&v.fr){u=(Number(v.fo)-Number(v.fr)).toLocaleString('en-US');}
+  document.getElementById('used').textContent=u;
+}
+function maxLen(id){return T[id]==='t'?4:5;}
+function press(k){
+  if(k==='B'){v[act]=v[act].slice(0,-1);}
+  else if(k==='N'){act=order[(order.indexOf(act)+1)%order.length];}
+  else if(v[act].length<maxLen(act)){
+    v[act]+=k;
+    if(v[act].length===maxLen(act)){
+      var i=order.indexOf(act);if(i<order.length-1)act=order[i+1];
+    }
+  }
+  draw();
+}
+var lab={B:'⌫',N:'NEXT'};
+['1','2','3','4','5','6','7','8','9','B','0','N'].forEach(function(k){
+  var b=document.createElement('button');
+  b.textContent=lab[k]||k;
+  if(lab[k])b.className='fn';
+  b.onclick=function(){press(k)};
+  document.getElementById('kp').appendChild(b);
+});
+document.getElementById('clearAll').onclick=function(){
+  order.forEach(function(i){v[i]=''});act='ro';draw();
+};
+draw();
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}
+</script>
+</body>
+</html>
